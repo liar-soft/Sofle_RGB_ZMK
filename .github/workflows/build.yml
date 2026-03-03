@@ -1,5 +1,59 @@
+name: Build ZMK Firmware
+
 on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
-    uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@main
+    runs-on: ubuntu-latest
+    container:
+      image: zmkfirmware/zmk-build-arm:3.5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache west modules
+        uses: actions/cache@v4
+        env:
+          cache-name: cache-zephyr-modules
+        with:
+          path: |
+            .west
+            modules/
+            tools/
+            zephyr/
+            bootloader/
+            zmk/
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('config/west.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Initialize workspace
+        run: west init -l config
+
+      - name: Update modules
+        run: west update
+
+      - name: Export Zephyr CMake package
+        run: west zephyr-export
+
+      - name: Build Left
+        run: west build -s zmk/app -d build/left -b nice_nano_v2 -- -DSHIELD=sofle_left
+
+      - name: Build Right
+        run: west build -s zmk/app -d build/right -b nice_nano_v2 -- -DSHIELD=sofle_right
+
+      - name: Archive Left
+        uses: actions/upload-artifact@v4
+        with:
+          name: sofle_left
+          path: build/left/zephyr/zmk.uf2
+          retention-days: 30
+
+      - name: Archive Right
+        uses: actions/upload-artifact@v4
+        with:
+          name: sofle_right
+          path: build/right/zephyr/zmk.uf2
+          retention-days: 30

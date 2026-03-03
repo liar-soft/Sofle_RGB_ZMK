@@ -2,7 +2,7 @@ on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
-    uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@main
+    runs-on: ubuntu-latest
     steps:
       - name: Clean workspace
         run: |
@@ -12,3 +12,4 @@ jobs:
           rm -rf zephyr/
           rm -rf bootloader/
           rm -rf zmk/
+     uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@main
